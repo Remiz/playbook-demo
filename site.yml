@@ -10,9 +10,6 @@
 
   tasks:
 
-    # Introduction
-    - debug: msg="Setting up your server to deploy the demo application Django--an-app-at-a-time"
-
     # User Management
     - name: Create user {{ user }}
       user: name={{ user }}
