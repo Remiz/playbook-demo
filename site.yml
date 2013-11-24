@@ -76,6 +76,10 @@
     - name: Start nginx service
       service: name=nginx state=started enabled=true
 
+    - name: Remove default site config
+      file: path=/etc/nginx/sites-enabled/default
+            state=absent
+
     # Supervisor
     - name: Install Supervisor
       apt: name=supervisor state=latest
