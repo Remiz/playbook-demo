@@ -19,7 +19,7 @@
             shell=/bin/bash
 
     - name: Add {{ user }} to sudoers
-      template: src=files/sudoers-user.tpl
+      template: src=templates/sudoers-user.j2
                 dest=/etc/sudoers.d/{{ user }}-sudoer
                 validate='visudo -cf %s'
 
@@ -31,7 +31,7 @@
     # Time management
     ###################
     - name: Set local timezone
-      template: src=files/timezone.tpl
+      template: src=templates/timezone.j2
                 dest=/etc/timezone
 
     - name: Update tzdata
@@ -127,18 +127,18 @@
       remote_user: "{{ user }}"
 
     - name: Setup Gunicorn config
-      template: src=files/gunicorn.conf.py.tpl
+      template: src=templates/gunicorn.conf.py.j2
                 dest=/home/{{ user }}/gunicorn.conf.py
       remote_user: "{{ user }}"
       notify: restart supervisor
 
     - name: Setup supervisor config (to manage gunicorn)
-      template: src=files/supervisor.conf.tpl
+      template: src=templates/supervisor.conf.j2
                 dest=/etc/supervisor/conf.d/{{ user }}.conf
       notify: restart supervisor
 
     - name: Setup Nginx config for our app
-      template: src=files/nginx.conf.tpl
+      template: src=templates/nginx.conf.j2
                 dest=/etc/nginx/sites-enabled/{{ user }}.conf
       notify: restart nginx
 
