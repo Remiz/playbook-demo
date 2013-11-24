@@ -1,0 +1,138 @@
+---
+- hosts: all
+  remote_user: root
+
+  vars:
+    # Username
+    user: myproject
+    # Timezone
+    timezone: 'Europe/Paris'
+
+  tasks:
+
+    # Introduction
+    - debug: msg="Setting up your server to deploy the demo application Django--an-app-at-a-time"
+
+    # User Management
+    - name: Create user {{ user }}
+      user: name={{ user }}
+            comment="{{ user }} user"
+            shell=/bin/bash
+
+    - name: Add {{ user }} to sudoers
+      template: src=files/sudoers-user.tpl
+                dest=/etc/sudoers.d/{{ user }}-sudoer
+                validate='visudo -cf %s'
+
+    - name: Add my public key to {{ user }}
+      authorized_key: user={{ user }}
+                      key="{{ lookup('file', '~/.ssh/id_rsa.pub') }}"
+
+    # Time management
+    - name: Set local timezone
+      template: src=files/timezone.tpl
+                dest=/etc/timezone
+
+    - name: Update tzdata
+      command: /usr/sbin/dpkg-reconfigure --frontend noninteractive tzdata
+
+    - name: Install NTP (and update apt cache for the first install)
+      apt: name=ntp state=present
+           update_cache=yes
+
+    - name: Start the ntp service
+      service: name=ntp state=started enabled=true
+
+    # Security
+    - name: Install fail2ban
+      apt: name=fail2ban state=present
+
+    - name: Start fail2ban service
+      service: name=fail2ban state=started enabled=true
+
+    - name: Copy iptables rules
+      copy: src=files/iptables.up
+            dest=/etc/iptables.up
+
+    - name: Load iptables
+      action: shell /sbin/iptables-restore < /etc/iptables.up
+
+    - name: Copy iptables init script # To load iptables on server restart
+      copy: src=files/iptables-script
+            dest=/etc/network/if-pre-up.d/iptables
+            mode=0755
+
+    # Misc tools
+    - name: Install vim
+      apt: name=vim state=present
+
+    - name: Install htop
+      apt: name=htop state=present
+
+    - name: Install git
+      apt: name=git state=present
+
+    # Nginx
+    - name: Install Nginx
+      apt: name=nginx state=latest
+
+    - name: Start nginx service
+      service: name=nginx state=started enabled=true
+
+    # Supervisor
+    - name: Install Supervisor
+      apt: name=supervisor state=latest
+
+    - name: Start supervisor service
+      service: name=supervisor state=started enabled=true
+
+    # Python / Virtualenv
+    - name: Install pip
+      apt: name=python-pip state=latest
+
+    - name: Install virtualenv
+      pip: name=virtualenv
+
+    # Deploying Django--an-app-at-a-time
+    - name: Git clone/pull Django--an-app-at-a-time
+      git: repo=https://github.com/sametmax/Django--an-app-at-a-time.git
+           dest=/home/{{ user }}/project
+      remote_user: "{{ user }}"
+
+    - name: Create a new requirement file
+      copy: src=files/requirements.txt
+            dest=/home/{{ user }}/project/requirements.txt
+      remote_user: "{{ user }}"
+
+    - name: Create virtualenv with requirements
+      pip: requirements=/home/{{ user }}/project/requirements.txt
+           virtualenv=/home/{{ user }}/venv
+      remote_user: "{{ user }}"
+
+    - name: Setup Gunicorn config
+      template: src=files/gunicorn.conf.py.tpl
+                dest=/home/{{ user }}/gunicorn.conf.py
+      remote_user: "{{ user }}"
+      notify: restart supervisor
+
+    - name: Setup supervisor config (to manage gunicorn)
+      template: src=files/supervisor.conf.tpl
+                dest=/etc/supervisor/conf.d/{{ user }}.conf
+      notify: restart supervisor
+
+    - name: Setup Nginx config for our app
+      template: src=files/nginx.conf.tpl
+                dest=/etc/nginx/sites-enabled/{{ user }}.conf
+      notify: restart nginx
+
+    - name: Deploy static files
+      command: /home/{{ user }}/venv/bin/python ./manage.py collectstatic --noinput
+               chdir=/home/{{ user }}/project/
+      remote_user: "{{ user }}"
+
+
+  handlers:
+    - name: restart nginx
+      service: name=nginx state=restarted enabled=yes
+    - name: restart supervisor
+      service: name=supervisor state=restarted enabled=yes
