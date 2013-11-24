@@ -68,14 +68,13 @@
     ###################
     # Misc. tools
     ###################
-    - name: Install vim
-      apt: name=vim state=present
-
-    - name: Install htop
-      apt: name=htop state=present
-
-    - name: Install git
-      apt: name=git state=present
+    - name: Install usefull system tools
+      apt: name={{ item }} state=present
+      with_items:
+        - vim
+        - htop
+        - git
+        - ncdu
 
     ###################
     # Nginx
