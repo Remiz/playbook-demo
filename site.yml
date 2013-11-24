@@ -10,7 +10,9 @@
 
   tasks:
 
+    ###################
     # User Management
+    ###################
     - name: Create user {{ user }}
       user: name={{ user }}
             comment="{{ user }} user"
@@ -25,7 +27,9 @@
       authorized_key: user={{ user }}
                       key="{{ lookup('file', '~/.ssh/id_rsa.pub') }}"
 
+    ###################
     # Time management
+    ###################
     - name: Set local timezone
       template: src=files/timezone.tpl
                 dest=/etc/timezone
@@ -40,7 +44,9 @@
     - name: Start the ntp service
       service: name=ntp state=started enabled=true
 
+    ###################
     # Security
+    ###################
     - name: Install fail2ban
       apt: name=fail2ban state=present
 
@@ -59,7 +65,9 @@
             dest=/etc/network/if-pre-up.d/iptables
             mode=0755
 
-    # Misc tools
+    ###################
+    # Misc. tools
+    ###################
     - name: Install vim
       apt: name=vim state=present
 
@@ -69,7 +77,9 @@
     - name: Install git
       apt: name=git state=present
 
+    ###################
     # Nginx
+    ###################
     - name: Install Nginx
       apt: name=nginx state=latest
 
@@ -80,21 +90,27 @@
       file: path=/etc/nginx/sites-enabled/default
             state=absent
 
+    ###################
     # Supervisor
+    ###################
     - name: Install Supervisor
       apt: name=supervisor state=latest
 
     - name: Start supervisor service
       service: name=supervisor state=started enabled=true
 
+    ###################
     # Python / Virtualenv
+    ###################
     - name: Install pip
       apt: name=python-pip state=latest
 
     - name: Install virtualenv
       pip: name=virtualenv
 
+    ###################
     # Deploying Django--an-app-at-a-time
+    ###################
     - name: Git clone/pull Django--an-app-at-a-time
       git: repo=https://github.com/sametmax/Django--an-app-at-a-time.git
            dest=/home/{{ user }}/project
@@ -131,7 +147,9 @@
                chdir=/home/{{ user }}/project/
       remote_user: "{{ user }}"
 
-
+  ###################
+  # Handlers
+  ###################
   handlers:
     - name: restart nginx
       service: name=nginx state=restarted enabled=yes
