@@ -31,11 +31,9 @@
     # Time management
     ###################
     - name: Set local timezone
-      template: src=templates/timezone.j2
-                dest=/etc/timezone
-
-    - name: Update tzdata
-      command: /usr/sbin/dpkg-reconfigure --frontend noninteractive tzdata
+      copy: content={{ timezone }}
+            dest=/etc/timezone
+      notify: update tzdata
 
     - name: Install NTP (and update apt cache for the first install)
       apt: name=ntp state=present
@@ -56,9 +54,7 @@
     - name: Copy iptables rules
       copy: src=files/iptables.up
             dest=/etc/iptables.up
-
-    - name: Load iptables
-      action: shell /sbin/iptables-restore < /etc/iptables.up
+      notify: reload iptables
 
     - name: Copy iptables init script # To load iptables on server restart
       copy: src=files/iptables-script
@@ -151,6 +147,10 @@
   # Handlers
   ###################
   handlers:
+    - name: reload iptables
+      action: shell /sbin/iptables-restore < /etc/iptables.up
+    - name: update tzdata
+      command: /usr/sbin/dpkg-reconfigure --frontend noninteractive tzdata
     - name: restart nginx
       service: name=nginx state=restarted enabled=yes
     - name: restart supervisor
